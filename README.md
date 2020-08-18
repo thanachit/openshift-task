@@ -1,1 +1,1 @@
-# openship-task
+# OpenShift Tasks
