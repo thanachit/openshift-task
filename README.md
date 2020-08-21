@@ -125,10 +125,33 @@ oc delete identity <username>
 
 ### 3. How to create group
 
+oc adm groups new dev-group
+oc adm groups add-users dev-group developer
 
 ### 7. How to create service accounts.
 
+`oc create sa <service_account_name> `
+
 ## RBAC
+
+Default cluster roles
+
+
+**Admin**
+A project manager. If used in a local binding, an admin has rights to view any resource in the project and modify any resource in the project except for quota.
+
+**basic-user**
+A user that can get basic information about projects and users.
+
+**cluster-admin** A super-user that can perform any action in any project. When bound to a user with a local binding, they have full control over quota and every action on every resource in the project.
+
+**cluster-status** A user that can get basic cluster status information.
+
+**edit** A user that can modify most objects in a project but does not have the power to view or modify roles or bindings.
+
+**self-provisioner** A user that can create their own projects.
+
+**view** A user who cannot make any modifications, but can see most objects in a project. They cannot view or modify roles or bindings.
 
 ### 1. how to assign cluster administrative privileges (cluster-admin) to user.
 ```
@@ -155,7 +178,11 @@ subjects:
   
 ```
 
-### 2. how to create developer user
+### 2. how to create developer user (edit role)
+
+oc policy add-role-to-group edit dev-group
+oc policy add-role-to-group edit <username> -n project-name (optional)
+
 ### 3. How to assign sudoer role to user.
 
 `oc create clusterrolebinding <any_valid_name> --clusterrole=sudoer --user=<username>`
@@ -194,16 +221,42 @@ initial-service-account-private-key   Opaque                                1   
 pull-secret                           kubernetes.io/dockerconfigjson        1      3d14h
 
 ```
-### 4. How to remove self-provisioner role from users.
-### 5. How to list all roles, rolebinding
-### 6. how to test if user can perform tasks.
+### 4. How to remove self-provisioner role from authenticated user:
+
+ oc adm policy remove-cluster-role-from-group \ > self-provisioner system:authenticated:oauth
+ 
+ 
+### 5. how to assign project admin privilege to user
+oc adm policy add-role-to-user admin keith -n project-name
+
+### 6. how to assign read-only permission to user
+oc adm policy add-role-to-user view keith -n project-name
+
+### 7. how to assign full control over the project including rate limit
+
+oc adm policy add-cluster-role-to-user cluster-admin keith
 
 
+### 8. how to test if user can perform tasks.
+
+oc adm policy who-can delete user
 
 ## Projects
+
+
 ### 1. how to create openshift project
+
+oc new-project hello-openshift \
+    --description="This is an example project" \
+    --display-name="Hello OpenShift"
+    
 ### 2. How to switch between project.
+
+oc project <projectname>
+
 ### 3. How to delete project
+oc delete project <project_name>
+
 ### 4. how to allow other user to work on my project
 
 
