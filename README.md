@@ -472,6 +472,11 @@ https://docs.openshift.com/container-platform/4.5/openshift_images/managing_imag
 
 https://docs.openshift.com/container-platform/4.5/openshift_images/create-images.html
 
+### How to refer to imagestream in Deployment
+
+```oc set triggers deployment/myapp --from-image ubi:8 -c myapp```
+
+https://developers.redhat.com/blog/2019/09/20/using-red-hat-openshift-image-streams-with-kubernetes-deployments/
 
 ## Resource Management
 1. limit resource usage
