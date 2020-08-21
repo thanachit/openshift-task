@@ -1,11 +1,14 @@
 # OpenShift Tasks
 
+** Work in progress **
+
 ## CLI
 
 	1. oc 
 	2. oc command --help
 	3. oc explain <object>
 	4. oc completion
+	5. How to find oc tool: In Web Console, click ? -> Command Line Tools -> oc - OpenShift Command Line Interface (CLI)
 
 
 ## CLI Access
@@ -329,16 +332,146 @@ oc new-project hello-openshift \
 
 `oc start-build --from-build=python-1`
 
-## Deploy
+## Application
+
 ### 1. How to deploy new application from Source code
+
+oc new-app /<path to source code>
+oc new-app https://github.com/sclorg/cakephp-ex
+oc new-app https://github.com/youruser/yourprivaterepo --source-secret=yoursecret
+
 ### 2. How to deploy new application from Dockerfile
 ### 3. HOw to deploy new application from Docker Image
+
+oc new-app mysql
+
+Existing image stream:
+oc new-app my-stream:v1
+
+### How to remove all resources related to Application
+
+```
+$ oc delete all -l app=hello-openshift
+pod "example-75778c488-9nz95" deleted
+pod "example-75778c488-h7n9g" deleted
+pod "example-75778c488-pd6rw" deleted
+replicaset.apps "example-75778c488" deleted
+```
 
 ## Image & Image Stream & Image Stream Tag
 
 Containers, images, and imagestreams are important concepts to understand when you set out to create and manage containerized software. An image holds a set of software that is ready to run, while a container is a running instance of a container image. An imagestream provides a way of storing different versions of the same basic image. Those different versions are represented by different tags on the same image name.
 
-## Image Registry
+
+An imagestream and its associated tags provide an abstraction for referencing container images from within OpenShift Container Platform. The imagestream and its tags allow you to see what images are available and ensure that you are using the specific image you need even if the image in the repository changes.
+
+Imagestreams do not contain actual image data, but present a single virtual view of related images, similar to an image repository.
+
+You can configure Builds and Deployments to watch an imagestream for notifications when new images are added and react by performing a Build or Deployment, respectively.
+
+
+More information: https://docs.openshift.com/container-platform/4.5/openshift_images/images-understand.html#images-about_images-understand
+
+### How to import image
+
+```
+$ oc import-image nginx:latest --confirm
+imagestream.image.openshift.io/nginx imported
+
+Name:			nginx
+Namespace:		default
+Created:		Less than a second ago
+Labels:			<none>
+Annotations:		openshift.io/image.dockerRepositoryCheck=2020-08-21T13:29:14Z
+Image Repository:	image-registry.openshift-image-registry.svc:5000/default/nginx
+Image Lookup:		local=false
+Unique Images:		1
+Tags:			1
+
+latest
+  tagged from nginx:latest
+
+  * nginx@sha256:179412c42fe3336e7cdc253ad4a2e03d32f50e3037a860cf5edbeb1aaddb915c
+      Less than a second ago
+
+Image Name:	nginx:latest
+Docker Image:	nginx@sha256:179412c42fe3336e7cdc253ad4a2e03d32f50e3037a860cf5edbeb1aaddb915c
+Name:		sha256:179412c42fe3336e7cdc253ad4a2e03d32f50e3037a860cf5edbeb1aaddb915c
+Created:	Less than a second ago
+Annotations:	image.openshift.io/dockerLayersOrder=ascending
+Image Size:	53.5MB in 5 layers
+Layers:		27.09MB	sha256:bf59529304463f62efa7179fa1a32718a611528cc4ce9f30c0d1bbc6724ec3fb
+		26.4MB	sha256:cb9a6de05e5a22241e25960c7914f11b56c9070ce28b8f69e899236e0d265c50
+		600B	sha256:9513ea0afb9372e5cabc4070c7adda0e8fc4728e0ad362b349fe233480f2e7d8
+		899B	sha256:b49ea07d2e9310b387436861db613a0a26a98855372e9d5e207660b0de7975a7
+		666B	sha256:a5e4a503d449887a0be28a2969149e647460aa6013f9ca90e88491aedf84f24e
+Image Created:	7 days ago
+Author:		<none>
+Arch:		amd64
+Entrypoint:	/docker-entrypoint.sh
+Command:	nginx -g daemon off;
+Working Dir:	<none>
+User:		<none>
+Exposes Ports:	80/tcp
+Docker Labels:	maintainer=NGINX Docker Maintainers <docker-maint@nginx.com>
+Environment:	PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+		NGINX_VERSION=1.19.2
+		NJS_VERSION=0.4.3
+		PKG_RELEASE=1~buster
+```
+
+### How to tag image
+
+OpenShift Container Platform provides the oc tag command, which is similar to the docker tag command, but operates on imagestreams instead of directly on images.
+
+`oc tag nginx:latest nginx:stable	`
+
+
+There are different types of tags available. The default behavior uses a permanent tag, which points to a specific image in time. If the _permanent tag_ is in use and the source changes, the tag does not change for the destination.
+
+A _tracking tag_ means the destination tag’s metadata is updated during the import of the source tag.
+
+To ensure the destination tag is updated whenever the source tag changes, use the --alias=true flag:
+
+`$ oc tag --alias=true <source> <destination>`
+
+ 	
+Note: Use a tracking tag for creating permanent aliases, for example, latest or stable. The tag only works correctly within a single imagestream. Trying to create a cross-imagestream alias produces an error.
+
+
+You can also add the --scheduled=true flag to have the destination tag be refreshed, or re-imported, periodically. The period is configured globally at the system level.
+
+The --reference flag creates an imagestreamtag that is not imported. The tag points to the source location, permanently
+
+More info: https://docs.openshift.com/container-platform/4.5/openshift_images/managing_images/tagging-images.html
+
+### Configuring periodic importing of imagestreamtags
+
+```
+oc tag <repositiory/image> <image-name:tag> --scheduled
+
+Example:
+oc tag docker.io/python:3.6.0 python:3.6 --scheduled
+
+Tag python:3.6 set to import docker.io/python:3.6.0 periodically.
+```
+
+This command causes OpenShift Container Platform to periodically update this particular image stream tag. This period is a cluster-wide setting set to 15 minutes by default.
+
+Remove the periodic check, re-run above command but omit the --scheduled flag. This will reset its behavior to default.
+
+`oc tag <repositiory/image> <image-name:tag>`
+
+https://docs.openshift.com/container-platform/4.5/openshift_images/image-streams-manage.html
+
+### How to allow pod to reference images from different project
+
+https://docs.openshift.com/container-platform/4.5/openshift_images/managing_images/using-image-pull-secrets.html
+
+### What is the guideline for creating image
+
+https://docs.openshift.com/container-platform/4.5/openshift_images/create-images.html
+
 
 ## Resource Management
 1. limit resource usage
