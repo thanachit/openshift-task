@@ -4,24 +4,43 @@
 
 ## CLI
 
-	1. oc 
-	2. oc command --help
-	3. oc explain <object>
-	4. oc completion
-	5. How to find oc tool: In Web Console, click ? -> Command Line Tools -> oc - OpenShift Command Line Interface (CLI)
+### how to get oc command line help
 
+`oc <command> --help`
+
+### How to get more information about OpenShift object
+
+`oc explain <object>`
+
+for example:
+
+`oc explain pod`
+`oc explain --recursive`
+	
+### how to enable oc command line completion
+```
+oc completion bash > oc_completion.sh
+source oc_completion.sh
+```
+
+Use tab oc command, you will get command line completion.
+
+### How to install oc tool
+
+In Web Console, click **?** button -> **Command Line Tools** -> **oc \- OpenShift Command Line Interface (CLI)**
+unpack and copy `oc` binary to **/usr/local/bin**
 
 ## CLI Access
 
-### 0. how to find API URL.
+### 0. how to find OpenShift API Server URL.
 
-Login to Web Console and click at User button on top right -> Copy Login Command -> Display Token
+Login to Web Console and click at **Username** for example: **kube-admin** button on top right -> Copy Login Command -> Display Token
 
 Example:
 
 https://api.cluster-1563.1563.sandbox283.opentlc.com:6443
 
-### 1. How to login using username password to the cluser using oc
+### 1. How to login using username password to the cluser using oc CLI tool.
 
 `oc login -u username -p passw0rd https://api.cluster-1563.1563.sandbox283.opentlc.com:6443`
 
@@ -35,9 +54,15 @@ run the command as bank user
 
 `oc --as=bank get pods`
 
+run the command as system:admin user from regular user.
+
+`oc --as=system:admin get secret -n openshift-config`
+
 Also, a group impersonation can be done, instead of a user impersonation:
 
 `oc --as-group=developers get pods`
+
+This is helpful in switching between users and can be used to test user/group permission.
 
 ### 3. How to imposonate system:admin
 
@@ -228,8 +253,10 @@ subjects:
 
 ### 2. How to create developer user or user group (edit role)
 
-`oc policy add-role-to-group edit dev-group` </p>
 `oc policy add-role-to-user edit <username> -n project-name (optional)`
+
+`oc policy add-role-to-group edit dev-group` </p>
+
 
 ### 3. How to assign sudoer cluster role to user.
 
@@ -282,9 +309,9 @@ pull-secret                           kubernetes.io/dockerconfigjson        1   
 
 `oc adm policy add-role-to-user view keith -n project-name`
 
-### 7. How to assign full control over the project including rate limit
+### 7. How to assign full control over the project including rate limit. 
 
-`oc adm policy add--role-to-user cluster-admin keith`
+`oc adm policy add-role-to-user cluster-admin keith -n <project-name>`
 
 
 ### 8. How to test which user can perform tasks.
@@ -304,7 +331,7 @@ oc new-project hello-openshift \
     
 ### 2. How to switch between project.
 
-`oc project <projectname>`
+`oc project <project_name>`
 
 ### 3. How to delete project
 
@@ -316,6 +343,7 @@ oc new-project hello-openshift \
 
 
 ## Build
+
 ### 1. How to create build config from local git repository
 
 `oc new-build .`
@@ -341,12 +369,22 @@ oc new-app https://github.com/sclorg/cakephp-ex
 oc new-app https://github.com/youruser/yourprivaterepo --source-secret=yoursecret
 
 ### 2. How to deploy new application from Dockerfile
-### 3. HOw to deploy new application from Docker Image
 
+oc new-app https://github.com/thanachit/my-simple-web
+
+*given that there is Dockerfile in my repository.
+
+### 3. How to deploy new application from Docker Image on dockerhub.
+
+```
 oc new-app mysql
+```
 
-Existing image stream:
+or Existing image stream:
+
+```
 oc new-app my-stream:v1
+```
 
 ### How to remove all resources related to Application
 
@@ -372,7 +410,7 @@ You can configure Builds and Deployments to watch an imagestream for notificatio
 
 More information: https://docs.openshift.com/container-platform/4.5/openshift_images/images-understand.html#images-about_images-understand
 
-### How to import image
+### How to import image to OpenShift Internal registry.
 
 ```
 $ oc import-image nginx:latest --confirm
@@ -449,8 +487,11 @@ More info: https://docs.openshift.com/container-platform/4.5/openshift_images/ma
 
 ```
 oc tag <repositiory/image> <image-name:tag> --scheduled
+```
 
 Example:
+
+```
 oc tag docker.io/python:3.6.0 python:3.6 --scheduled
 
 Tag python:3.6 set to import docker.io/python:3.6.0 periodically.
@@ -517,27 +558,28 @@ Example: Expose a Service and specify the host name
 
 ## Cluster Scaling.
 
-
-
 ## Installation
 
 ## Troubleshooting 
+
 ### 0. get cluster version
-> oc get clusterversion </p>
-> NAME      VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS </p>
-> version   4.4.8     True        False         3d13h   Cluster version is 4.4.8
+```
+oc get clusterversion </p>
+NAME      VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS </p>
+version   4.4.8     True        False         3d13h   Cluster version is 4.4.8
+```
 
 `oc describe clusterversion`
 
-### review cluster operators
+### review cluster operators status
 `oc get clusteroperators`
 
 
-### 1. debug pod
+### debug pod commands
 `oc logs pod/podname` </p>
 `oc debug pod/podname`
 
-### 2. debug node
+### debug node commands
 `oc get nodes` </p>
 `oc adm top nodes` </p>
 `oc describe node my-node-name` </p>
@@ -581,23 +623,24 @@ list container on nodes </P>
 
 `systemctl status kubelet`
 
-> $ oc adm top node
-> NAME                                              CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%
-> ip-10-0-138-229.ap-southeast-1.compute.internal   330m         4%     2541Mi          8%
-> ip-10-0-152-138.ap-southeast-1.compute.internal   509m         14%    3258Mi          22%
-> ip-10-0-179-0.ap-southeast-1.compute.internal     421m         5%     3373Mi          11%
-> ip-10-0-189-168.ap-southeast-1.compute.internal   508m         14%    3221Mi          22%
-> ip-10-0-214-156.ap-southeast-1.compute.internal   626m         17%    3606Mi          24%
-> thanachit@BankMBP ~/Projects/openshift-task/users (master)
-
-> $ oc adm top pod
-> NAME                      CPU(cores)   MEMORY(bytes)
-> example-75778c488-9nz95   0m           1Mi
-> example-75778c488-h7n9g   0m           1Mi
-> example-75778c488-pd6rw   0m           2Mi
-> my-simple-web-9-68xr7     0m           28Mi
-> my-simple-web-9-7n6bp     0m           20Mi
-
+```
+$ oc adm top node
+NAME                                              CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%
+ip-10-0-138-229.ap-southeast-1.compute.internal   330m         4%     2541Mi          8%
+ip-10-0-152-138.ap-southeast-1.compute.internal   509m         14%    3258Mi          22%
+ip-10-0-179-0.ap-southeast-1.compute.internal     421m         5%     3373Mi          11%
+ip-10-0-189-168.ap-southeast-1.compute.internal   508m         14%    3221Mi          22%
+ip-10-0-214-156.ap-southeast-1.compute.internal   626m         17%    3606Mi          24%
+thanachit@BankMBP ~/Projects/openshift-task/users (master)
+	
+$ oc adm top pod
+NAME                      CPU(cores)   MEMORY(bytes)
+example-75778c488-9nz95   0m           1Mi
+example-75778c488-h7n9g   0m           1Mi
+example-75778c488-pd6rw   0m           2Mi
+my-simple-web-9-68xr7     0m           28Mi
+my-simple-web-9-7n6bp     0m           20Mi
+```
 
 ### 3. oc with debug
 
