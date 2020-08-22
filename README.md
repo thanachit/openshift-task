@@ -4,6 +4,11 @@
 
 ## CLI
 
+### How to install oc tool
+
+In Web Console, click **?** button -> **Command Line Tools** -> **oc \- OpenShift Command Line Interface (CLI)**
+unpack and copy `oc` binary to **/usr/local/bin**
+
 ### how to get oc command line help
 
 `oc <command> --help`
@@ -24,11 +29,6 @@ source oc_completion.sh
 ```
 
 Use tab oc command, you will get command line completion.
-
-### How to install oc tool
-
-In Web Console, click **?** button -> **Command Line Tools** -> **oc \- OpenShift Command Line Interface (CLI)**
-unpack and copy `oc` binary to **/usr/local/bin**
 
 ## CLI Access
 
@@ -648,3 +648,11 @@ my-simple-web-9-7n6bp     0m           20Mi
 
 ## Persistent Storage 
 
+
+## YAML
+
+https://www.openshift.com/blog/openshift-4-3-console-customization-yaml-samples
+
+## Sample Application
+
+https://docs.openshift.com/container-platform/4.5/cli_reference/developer_cli_odo/using-sample-applications.html
