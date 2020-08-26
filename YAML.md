@@ -24,3 +24,20 @@ spec:
           ports:
             - containerPort: 8080
 ```
+
+## Service
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: example
+  namespace: project2
+spec:
+  selector:
+    app: MyApp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9376
+```

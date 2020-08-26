@@ -298,8 +298,81 @@ pull-secret                           kubernetes.io/dockerconfigjson        1   
 ```
 ### 4. How to remove self-provisioner role from authenticated user:
 
-` oc adm policy remove-cluster-role-from-group self-provisioner system:authenticated:oauth`
- 
+This role binding has the rbac.authorization.kubernetes.io/autoupdate: "true" annotation.
+
+Typically, you remove a cluster role binding with oc adm policy remove-cluster-role-from-group or oc adm policy remove-cluster-role-from-user. Because the autoupdate process restores the access, you cannot use either approach with the self-provisioners role binding yet.
+    
+Set the rbac.authorization.kubernetes.io/autoupdate annotation on the self-provisioners cluster role binding to false:
+
+`oc annotate clusterrolebinding self-provisioners --overwrite rbac.authorization.kubernetes.io/autoupdate=false`    
+`oc adm policy remove-cluster-role-from-group self-provisioner system:authenticated:oauth`
+
+Example:
+
+```
+$ oc describe clusterrolebindings self-provisioners
+Name:         self-provisioners
+Labels:       <none>
+Annotations:  rbac.authorization.kubernetes.io/autoupdate: true
+Role:
+  Kind:  ClusterRole
+  Name:  self-provisioner
+Subjects:
+  Kind   Name                        Namespace
+  ----   ----                        ---------
+  Group  system:authenticated:oauth
+  
+$ oc adm policy remove-cluster-role-from-group self-provisioner system:authenticated:oauth
+Warning: Your changes may get lost whenever a master is restarted, unless you prevent reconciliation of this rolebinding using the following command: oc annotate clusterrolebinding.rbac self-provisioners 'rbac.authorization.kubernetes.io/autoupdate=false' --overwrite
+
+clusterrole.rbac.authorization.k8s.io/self-provisioner removed: "system:authenticated:oauth"
+
+$ oc describe clusterrolebindings self-provisioners
+Error from server (NotFound): clusterrolebindings.rbac.authorization.k8s.io "self-provisioners" not found
+
+$ oc login -u eric -p passw0rd
+Login successful.
+
+You don't have any projects. Contact your system administrator to request a project.
+```
+
+Restore Self-Provisioner Access to OAuth Authenticated Users
+
+```
+$ oc annotate clusterrolebinding.rbac self-provisioner 'rbac.authorization.kubernetes.io/autoupdate=true' --overwrite
+
+clusterrolebinding.rbac.authorization.k8s.io/self-provisioner annotated
+
+thanachit@BankMBP ~/Projects/openshift-task (master)
+$ oc describe clusterrolebinding self-provisioner
+Name:         self-provisioner
+Labels:       <none>
+Annotations:  rbac.authorization.kubernetes.io/autoupdate: true
+Role:
+  Kind:  ClusterRole
+  Name:  self-provisioner
+Subjects:
+  Kind  Name  Namespace
+  ----  ----  ---------
+  
+$ oc delete pod -n openshift-apiserver --all
+pod "apiserver-598cdd5789-7gnhv" deleted
+pod "apiserver-598cdd5789-hz7zp" deleted
+pod "apiserver-598cdd5789-zmj28" deleted
+  
+$ oc describe clusterrolebinding self-provisioners
+Name:         self-provisioners
+Labels:       <none>
+Annotations:  rbac.authorization.kubernetes.io/autoupdate: true
+Role:
+  Kind:  ClusterRole
+  Name:  self-provisioner
+Subjects:
+  Kind   Name                        Namespace
+  ----   ----                        ---------
+  Group  system:authenticated:oauth
+  
+```
  
 ### 5. How to assign project admin privilege to user "keith"
 
@@ -329,7 +402,7 @@ oc new-project hello-openshift \
     --display-name="Hello OpenShift"
 ```
     
-### 2. How to switch between project.
+### 2. How to switch between projects.
 
 `oc project <project_name>`
 
@@ -340,7 +413,6 @@ oc new-project hello-openshift \
 ### 4. how to allow other user to work on my project
 
 `oc policy add-role-to-group edit <username> -n project-name (optional)`
-
 
 ## Build
 
@@ -519,6 +591,179 @@ https://docs.openshift.com/container-platform/4.5/openshift_images/create-images
 
 https://developers.redhat.com/blog/2019/09/20/using-red-hat-openshift-image-streams-with-kubernetes-deployments/
 
+
+## Secrets
+
+
+Kubernetes and OpenShift uses secret resources to hold sensitive information, such as:
+• Passwords.
+• Sensitive configuration files.
+• Credentials to an external resource, such as an SSH key or OAuth token.
+
+oc create secret generic mysql --from-literal user=myuser --from-literal password=passw0rd --from-literal database=test_secrets --from-literal hostname=mysql
+
+Environment Variable:
+oc new-app mysql
+oc set env dc/mysql --prefix MYSQL_  --from secret/mysql
+
+Configuration file:
+oc create secret generic demo-secret from-literal maintainer=bank from-literal email=bank@acim
+oc set volume dc/my-simple-web --add --type=secret --secret-name=demo-secret --mount-path=/app-secrets
+
+Look at DC:
+
+```yaml
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              key: database
+              name: mysql
+        - name: MYSQL_HOSTNAME
+          valueFrom:
+            secretKeyRef:
+              key: hostname
+              name: mysql
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: mysql
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              key: user
+              name: mysql
+```
+
+Login to mysql:
+
+```
+$ oc rsh mysql-2-fmvrc
+
+sh-4.2$ mysql -u myuser --password=passw0rd test_secrets -e 'show databases;'
+mysql: [Warning] Using a password on the command line interface can be insecure.
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| test_secrets       |
++--------------------+
+```
+
+oc new-app --name quotes --docker-image quay.io/redhattraining/famous-quotes:1.0
+oc set env dc/quotes --prefix QUOTES_ --from secret/mysql
+
+```
+$ oc describe dc/quotes
+Name:		quotes
+Namespace:	test-secret
+Created:	3 minutes ago
+Labels:		app=quotes
+		app.kubernetes.io/component=quotes
+		app.kubernetes.io/instance=quotes
+Annotations:	openshift.io/generated-by=OpenShiftNewApp
+Latest Version:	2
+Selector:	deploymentconfig=quotes
+Replicas:	1
+Triggers:	Config, Image(quotes@1.0, auto=true)
+Strategy:	Rolling
+Template:
+Pod Template:
+  Labels:	deploymentconfig=quotes
+  Annotations:	openshift.io/generated-by: OpenShiftNewApp
+  Containers:
+   quotes:
+    Image:	quay.io/redhattraining/famous-quotes@sha256:823f01cf4e2c4733dfdf6b305ad3985e4452423838e71544f90a82a344ef2fb2
+    Port:	8000/TCP
+    Host Port:	0/TCP
+    Environment:
+      QUOTES_DATABASE:	<set to the key 'database' in secret 'mysql'>	Optional: false
+      QUOTES_HOSTNAME:	<set to the key 'hostname' in secret 'mysql'>	Optional: false
+      QUOTES_PASSWORD:	<set to the key 'password' in secret 'mysql'>	Optional: false
+      QUOTES_USER:	<set to the key 'user' in secret 'mysql'>	Optional: false
+    Mounts:		<none>
+  Volumes:		<none>
+
+Deployment #2 (latest):
+	Name:		quotes-2
+	Created:	about a minute ago
+	Status:		Complete
+	Replicas:	1 current / 1 desired
+	Selector:	deployment=quotes-2,deploymentconfig=quotes
+	Labels:		app.kubernetes.io/component=quotes,app.kubernetes.io/instance=quotes,app=quotes,openshift.io/deployment-config.name=quotes
+	Pods Status:	1 Running / 0 Waiting / 0 Succeeded / 0 Failed
+Deployment #1:
+	Created:	3 minutes ago
+	Status:		Failed
+	Replicas:	0 current / 0 desired
+```
+
+Example: DeploymentConfig that has secret mounted as volume:
+
+```
+$ oc describe  dc/my-simple-web
+Name:		my-simple-web
+Namespace:	secret-file
+Created:	6 minutes ago
+Labels:		app=my-simple-web
+		app.kubernetes.io/component=my-simple-web
+		app.kubernetes.io/instance=my-simple-web
+Annotations:	openshift.io/generated-by=OpenShiftNewApp
+Latest Version:	2
+Selector:	deploymentconfig=my-simple-web
+Replicas:	1
+Triggers:	Config, Image(my-simple-web@latest, auto=true)
+Strategy:	Rolling
+Template:
+Pod Template:
+  Labels:	deploymentconfig=my-simple-web
+  Annotations:	openshift.io/generated-by: OpenShiftNewApp
+  Containers:
+   my-simple-web:
+    Image:		thanachit/my-simple-web@sha256:3f963c322b661f6f09c6380e1389fd98368a2ba1209443cf0d678ffdae0a7854
+    Port:		<none>
+    Host Port:		<none>
+    Environment:	<none>
+    Mounts:
+      /app-secrets from volume-25xpd (rw)
+  Volumes:
+   volume-25xpd:
+    Type:	Secret (a volume populated by a Secret)
+    SecretName:	demo-secret
+    Optional:	false
+
+Deployment #2 (latest):
+	Name:		my-simple-web-2
+	Created:	2 minutes ago
+	Status:		Complete
+	Replicas:	1 current / 1 desired
+	Selector:	deployment=my-simple-web-2,deploymentconfig=my-simple-web
+	Labels:		app.kubernetes.io/component=my-simple-web,app.kubernetes.io/instance=my-simple-web,app=my-simple-web,openshift.io/deployment-config.name=my-simple-web
+	Pods Status:	1 Running / 0 Waiting / 0 Succeeded / 0 Failed
+Deployment #1:
+	Created:	6 minutes ago
+	Status:		Complete
+	Replicas:	0 current / 0 desired
+```
+
+Login to Pod:
+
+```
+$ df -h /app-secrets
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs            16G  8.0K   16G   1% /app-secrets
+$ ls -lrt
+total 0
+lrwxrwxrwx. 1 root root 17 Aug 22 17:30 maintainer -> ..data/maintainer
+lrwxrwxrwx. 1 root root 12 Aug 22 17:30 email -> ..data/email
+$
+
+```
+
+             
 ## Resource Management
 1. limit resource usage
 
@@ -526,6 +771,8 @@ https://developers.redhat.com/blog/2019/09/20/using-red-hat-openshift-image-stre
 1. How to upgrade OpenShift Cluster
 ## Scale
 1. scale application to meet increased demand
+
+`oc scale dc httpd --replicas 3`
 
 ## Event & Alert & logs
 
@@ -649,7 +896,7 @@ my-simple-web-9-7n6bp     0m           20Mi
 ## Persistent Storage 
 
 
-## YAML
+## YAML Sample (Built-in)
 
 https://www.openshift.com/blog/openshift-4-3-console-customization-yaml-samples
 
