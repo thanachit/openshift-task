@@ -9,10 +9,10 @@ https://www.openshift.com/blog/tag/openshift-container-platform
 
 ## OpenShift End to End Series
 
-https://www.openshift.com/blog/openshift-end-to-end-plan-and-deploy
-https://www.openshift.com/blog/openshift-end-to-end-core-services
-https://www.openshift.com/blog/openshift-end-to-end-cluster-customization
-https://www.openshift.com/blog/openshift-end-to-end-user-config-and-application-deployment
+https://www.openshift.com/blog/openshift-end-to-end-plan-and-deploy </p>
+https://www.openshift.com/blog/openshift-end-to-end-core-services </p>
+https://www.openshift.com/blog/openshift-end-to-end-cluster-customization </p>
+https://www.openshift.com/blog/openshift-end-to-end-user-config-and-application-deployment </p>
 
 ## Image Management
 
